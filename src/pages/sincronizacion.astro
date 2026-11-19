@@ -1,0 +1,98 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Icon from '../components/Icon.astro';
+import { CHANNELS } from '../data/channels';
+---
+
+<Layout title="Sincronización" description="Registro de eventos en vivo, cola de sincronización por canal con reintentos y bandeja de conflictos para resolver." view="sincronizacion">
+  <header class="page-head">
+    <div>
+      <p class="page-head__eyebrow">Central → canales</p>
+      <h1 class="page-title">Sincronización</h1>
+      <p class="page-head__lead">Cada cambio de stock viaja a los tres canales. Si un canal falla se reintenta solo; si sigue fallando, queda un conflicto para resolver.</p>
+    </div>
+    <div class="page-head__actions">
+      <button class="btn" type="button" data-resolve-all><Icon name="check" size={16} /> Resolver todo</button>
+    </div>
+  </header>
+
+  <section class="queue-stats" aria-label="Estado por canal">
+    {
+      CHANNELS.map((channel) => (
+        <article class="qstat" data-qstat={channel.id}>
+          <header class="qstat__head">
+            <span class={`ch-badge ch-badge--sm ch-badge--${channel.id}`} aria-hidden="true">
+              {channel.initials}
+            </span>
+            {channel.name}
+            <span class="pill pill--ok" data-qstat-health>
+              Conectado
+            </span>
+          </header>
+          <div class="qstat__nums">
+            <div>
+              <b class="num" data-qstat-queue>
+                0
+              </b>
+              en cola
+            </div>
+            <div>
+              <b class="num" data-qstat-retry>
+                0
+              </b>
+              reintentando
+            </div>
+            <div>
+              <b class="num" data-qstat-latency>
+                –
+              </b>
+              demora media
+            </div>
+          </div>
+        </article>
+      ))
+    }
+  </section>
+
+  <div class="view-grid view-grid--wide">
+    <section class="card" aria-labelledby="stream-title">
+      <div class="card__head">
+        <h2 class="card__title" id="stream-title">Registro de eventos</h2>
+        <div class="stream-controls">
+          <label>
+            <span class="visually-hidden">Canal</span>
+            <select class="select" data-stream-channel>
+              <option value="">Todos los canales</option>
+              {CHANNELS.map((channel) => <option value={channel.id}>{channel.name}</option>)}
+            </select>
+          </label>
+          <button class="btn btn--ghost btn--sm" type="button" data-stream-pause aria-pressed="false"><Icon name="pause" size={14} /> Congelar</button>
+        </div>
+      </div>
+      <div class="card__body">
+        <div class="chips" role="group" aria-label="Tipo de evento">
+          <button class="chip" type="button" data-feed-filter="all" aria-pressed="true">Todo</button>
+          <button class="chip" type="button" data-feed-filter="venta" aria-pressed="false">Ventas</button>
+          <button class="chip" type="button" data-feed-filter="sync" aria-pressed="false">Sincronización</button>
+          <button class="chip" type="button" data-feed-filter="pedido" aria-pressed="false">Pedidos</button>
+          <button class="chip" type="button" data-feed-filter="problemas" aria-pressed="false">Problemas</button>
+        </div>
+        <p class="card__sub stream-note" data-stream-note aria-live="polite"></p>
+        <ol class="feed stream" data-stream aria-label="Eventos">
+          {Array.from({ length: 10 }, () => <li class="skeleton skeleton--row" />)}
+        </ol>
+      </div>
+    </section>
+
+    <section class="card" id="conflictos" aria-labelledby="conflicts-title" tabindex="-1">
+      <div class="card__head">
+        <h2 class="card__title" id="conflicts-title">Conflictos <span class="num" data-conflict-count>0</span></h2>
+        <span class="card__sub">Diferencias y fallas que esperan una decisión</span>
+      </div>
+      <div class="card__body" data-conflicts>
+        <span class="skeleton skeleton--row"></span>
+        <span class="skeleton skeleton--row"></span>
+      </div>
+    </section>
+  </div>
+</Layout>

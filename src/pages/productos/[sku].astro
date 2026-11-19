@@ -1,0 +1,208 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Icon from '../../components/Icon.astro';
+import ProductArt from '../../components/ProductArt.astro';
+import { CATEGORY_BY_ID, PRODUCTS, skuSlug, type Product } from '../../data/catalog';
+import { CHANNELS } from '../../data/channels';
+import { channelPrice } from '../../data/history';
+import { formatDateTime, formatDay, formatMoney, formatPercent, formatUnits } from '../../lib/format';
+import { areaPath, niceMax, scaleLinear, stepPath } from '../../lib/chart';
+import { monthMovements, stockSeries } from '../../lib/product-history';
+
+export function getStaticPaths() {
+  return PRODUCTS.map((product) => ({ params: { sku: skuSlug(product) }, props: { product } }));
+}
+
+type Props = { product: Product };
+const { product } = Astro.props;
+const category = CATEGORY_BY_ID[product.category]?.label ?? '';
+const movements = monthMovements(product.index);
+const series = stockSeries(product.index);
+const W = 1000;
+const H = 230;
+const PAD = { l: 36, r: 8, t: 10, b: 24 };
+const max = niceMax(Math.max(...series.map((point) => point.value), product.min * 2));
+const x = scaleLinear([series[0]!.at, series[series.length - 1]!.at], [PAD.l, W - PAD.r]);
+const y = scaleLinear([0, max], [H - PAD.b, PAD.t]);
+const points = series.map((point) => ({ x: x(point.at), y: y(point.value) }));
+const ticks = [0, max / 2, max];
+const sold = movements.filter((movement) => movement.reason === 'venta').reduce((sum, movement) => sum - movement.delta, 0);
+const restocked = movements.filter((movement) => movement.reason === 'reposicion').reduce((sum, movement) => sum + movement.delta, 0);
+const REASON = { venta: 'Venta', reposicion: 'Ingreso de proveedor', cancelada: 'Venta cancelada sin stock' } as const;
+const channelName = (id: string | null) => CHANNELS.find((channel) => channel.id === id)?.name ?? 'Depósito';
+---
+
+<Layout title={product.name} description={`Stock por canal, reglas de precio e historial de ${product.name} (${product.sku}).`} view="producto">
+  <a class="back-link" href="/productos"><Icon name="back" size={16} /> Productos</a>
+  <header class="page-head product-head" data-product={product.index}>
+    <div class="product-head__main">
+      <ProductArt category={product.category} size={84} />
+      <div>
+        <p class="page-head__eyebrow">{category} · {product.brand}</p>
+        <h1 class="page-title product-head__title" transition:name={`product-${product.sku}`}>{product.name}</h1>
+        <p class="sku">{product.sku} · EAN {product.ean} · Mínimo {product.min} u.</p>
+      </div>
+    </div>
+    <div class="page-head__actions">
+      <button class="btn btn--ghost" type="button" data-force-sync><Icon name="sync" size={16} /> Forzar sincronización</button>
+      <button class="btn" type="button" data-restock><Icon name="plus" size={16} /> Ingresar 24 u.</button>
+    </div>
+  </header>
+
+  <div class="detail-grid">
+    <section class="card scene--product" aria-labelledby="stock-title" data-ps-root>
+      <div class="card__head">
+        <h2 class="card__title" id="stock-title">Stock por canal</h2>
+        <span class="card__sub">Se iguala solo en segundos</span>
+      </div>
+      <div class="card__body psync">
+        <div class="psync__central">
+          <span>Sistema central</span>
+          <b class="num" data-ps-central>{formatUnits(product.stock)}</b>
+        </div>
+        <ul class="psync__channels">
+          {
+            CHANNELS.map((channel) => (
+              <li class="psync__channel" data-ps-ch={channel.id} data-state="ok">
+                <span class={`ch-badge ch-badge--${channel.id}`} aria-hidden="true">
+                  {channel.initials}
+                </span>
+                <span class="psync__ch-text">
+                  <span class="psync__ch-name">{channel.name}</span>
+                  <span class="psync__status" data-ps-status>
+                    En sincronía
+                  </span>
+                </span>
+                <b class="num psync__units" data-ps-units>
+                  –
+                </b>
+                <span class="psync__progress" aria-hidden="true">
+                  <span data-ps-bar />
+                </span>
+              </li>
+            ))
+          }
+        </ul>
+        <div class="psync__timer" aria-live="polite">
+          <span class="psync__timer-label">Demora simulada</span>
+          <b class="num psync__clock" data-ps-timer>0,0 s</b>
+          <span class="psync__result" data-ps-result>Los tres canales muestran el stock del central.</span>
+        </div>
+        <div class="psync__actions" role="group" aria-label="Vender a mano">
+          {
+            CHANNELS.map((channel) => (
+              <button class="btn btn--ghost btn--sm" type="button" data-ps-sell={channel.id}>
+                Vender 3 en {channel.name}
+              </button>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+
+    <div class="stack">
+      <section class="card" aria-labelledby="price-title">
+        <div class="card__head">
+          <h2 class="card__title" id="price-title">Precio por canal</h2>
+          <a class="link-btn" href="/reglas">Editar reglas</a>
+        </div>
+        <div class="card__body">
+          <table class="table table--compact table--cards">
+            <caption class="visually-hidden">Precio, comisión y margen por canal</caption>
+            <thead><tr><th scope="col">Canal</th><th scope="col" class="num">Recargo</th><th scope="col" class="num">Precio</th><th scope="col" class="num">Comisión</th><th scope="col" class="num">Margen</th></tr></thead>
+            <tbody>
+              {
+                CHANNELS.map((channel) => {
+                  const price = channelPrice(product.price, channel.markup);
+                  const fee = Math.round((price * channel.fee) / 100);
+                  const margin = ((price - fee - product.cost) / price) * 100;
+                  return (
+                    <tr data-price-row={channel.id}>
+                      <th scope="row"><span class={`pill pill--${channel.id}`}>{channel.name}</span></th>
+                      <td class="num" data-label="Recargo" data-markup>{formatPercent(channel.markup)}</td>
+                      <td class="num" data-label="Precio" data-price>{formatMoney(price)}</td>
+                      <td class="num" data-label="Comisión" data-fee>{formatMoney(fee)}</td>
+                      <td class="num" data-label="Margen" data-margin>{formatPercent(margin)}</td>
+                    </tr>
+                  );
+                })
+              }
+            </tbody>
+          </table>
+          <p class="card__sub">Precio base {formatMoney(product.price)} · costo {formatMoney(product.cost)}</p>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="adjust-title">
+        <div class="card__head"><h2 class="card__title" id="adjust-title">Ajuste de inventario</h2></div>
+        <form class="card__body adjust" data-adjust>
+          <label class="field">
+            Stock contado en el depósito
+            <input class="input" type="number" min="0" max="5000" inputmode="numeric" data-adjust-input value={product.stock} />
+          </label>
+          <button class="btn" type="submit">Guardar conteo</button>
+          <p class="card__sub">El ajuste se publica en los tres canales como cualquier otro movimiento.</p>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <section class="card chart-card" aria-labelledby="month-title">
+    <div class="card__head">
+      <div>
+        <h2 class="card__title" id="month-title">Stock en octubre</h2>
+        <p class="card__sub">{formatUnits(sold)} u. vendidas · {formatUnits(restocked)} u. ingresadas</p>
+      </div>
+    </div>
+    <figure class="card__body">
+      <svg class="line-chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby="month-title month-desc">
+        <desc id="month-desc">Evolución del stock central durante octubre. Termina en {formatUnits(product.stock)} unidades. El detalle está en la tabla de movimientos.</desc>
+        {
+          ticks.map((tick) => (
+            <g class="line-chart__tick">
+              <line x1={PAD.l} x2={W - PAD.r} y1={y(tick)} y2={y(tick)} />
+              <text x={PAD.l - 6} y={y(tick) + 4} text-anchor="end">{formatUnits(tick)}</text>
+            </g>
+          ))
+        }
+        <line class="line-chart__min" x1={PAD.l} x2={W - PAD.r} y1={y(product.min)} y2={y(product.min)} />
+        <path class="line-chart__area" d={areaPath(points, H - PAD.b, true)} />
+        <path class="line-chart__line" d={stepPath(points)} />
+        <text class="line-chart__label" x={PAD.l} y={H - 6}>{formatDay(series[0]!.at)}</text>
+        <text class="line-chart__label" x={W - PAD.r} y={H - 6} text-anchor="end">{formatDay(series[series.length - 1]!.at)}</text>
+      </svg>
+    </figure>
+  </section>
+
+  <section class="card" aria-labelledby="history-title">
+    <div class="card__head">
+      <h2 class="card__title" id="history-title">Historial de movimientos</h2>
+      <span class="card__sub">Hoy en vivo y el mes anterior</span>
+    </div>
+    <div class="card__body">
+      <table class="table table--cards">
+        <caption class="visually-hidden">Movimientos de stock del producto</caption>
+        <thead>
+          <tr><th scope="col">Fecha</th><th scope="col">Movimiento</th><th scope="col">Canal</th><th scope="col" class="num">Cantidad</th><th scope="col" class="num">Stock</th><th scope="col">Referencia</th></tr>
+        </thead>
+        <tbody data-today></tbody>
+        <tbody>
+          {
+            movements.slice(0, 40).map((movement) => (
+              <tr>
+                <td data-label="Fecha">{formatDateTime(movement.at)}</td>
+                <td data-label="Movimiento">{REASON[movement.reason]}</td>
+                <td data-label="Canal">{channelName(movement.channel)}</td>
+                <td class:list={['num', movement.delta > 0 ? 'is-up' : movement.delta < 0 ? 'is-down' : '']} data-label="Cantidad">
+                  {movement.delta > 0 ? `+${movement.delta}` : movement.delta || '0'}
+                </td>
+                <td class="num" data-label="Stock">{formatUnits(movement.after)}</td>
+                <td class="sku" data-label="Referencia">{movement.ref}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</Layout>

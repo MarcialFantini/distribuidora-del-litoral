@@ -1,0 +1,72 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Icon from '../../components/Icon.astro';
+import { CATEGORIES, PRODUCTS } from '../../data/catalog';
+import { CHANNELS } from '../../data/channels';
+---
+
+<Layout title="Productos" description="Los 300 productos de Distribuidora del Litoral con su stock central y lo publicado en cada canal." view="productos">
+  <header class="page-head">
+    <div>
+      <p class="page-head__eyebrow">Catálogo unificado</p>
+      <h1 class="page-title">Productos</h1>
+      <p class="page-head__lead">
+        {PRODUCTS.length} productos de limpieza. Un stock central y lo que muestra cada canal, actualizado en vivo.
+      </p>
+    </div>
+    <div class="page-head__actions">
+      <button class="btn btn--ghost" type="button" data-export><Icon name="download" size={16} /> Exportar CSV</button>
+    </div>
+  </header>
+
+  <section class="card">
+    <div class="toolbar">
+      <label class="search">
+        <Icon name="search" />
+        <span class="visually-hidden">Buscar producto</span>
+        <input class="input" type="search" placeholder="Nombre, SKU o EAN" data-search autocomplete="off" />
+      </label>
+      <label class="field field--inline">
+        <span class="visually-hidden">Categoría</span>
+        <select class="select" data-category>
+          <option value="">Todas las categorías</option>
+          {CATEGORIES.map((category) => <option value={category.id}>{category.label}</option>)}
+        </select>
+      </label>
+      <div class="chips" role="group" aria-label="Filtrar por estado">
+        <button class="chip" type="button" data-status="all" aria-pressed="true">Todos <span class="chip__count" data-status-count="all">{PRODUCTS.length}</span></button>
+        <button class="chip" type="button" data-status="low" aria-pressed="false">Stock bajo <span class="chip__count" data-status-count="low">–</span></button>
+        <button class="chip" type="button" data-status="out" aria-pressed="false">Sin stock <span class="chip__count" data-status-count="out">–</span></button>
+        <button class="chip" type="button" data-status="syncing" aria-pressed="false">Sincronizando <span class="chip__count" data-status-count="syncing">–</span></button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="table table--products" data-table>
+        <caption class="visually-hidden">Productos con stock central y publicado por canal</caption>
+        <thead>
+          <tr>
+            <th scope="col"><button class="sort-btn" type="button" data-sort="name" aria-pressed="false">Producto</button></th>
+            <th scope="col">Categoría</th>
+            <th scope="col" class="num"><button class="sort-btn" type="button" data-sort="stock" aria-pressed="false">Central</button></th>
+            {CHANNELS.map((channel) => <th scope="col" class="num" title={channel.name}>{channel.initials}</th>)}
+            <th scope="col" class="num"><button class="sort-btn" type="button" data-sort="price" aria-pressed="false">Precio base</button></th>
+            <th scope="col">Estado</th>
+          </tr>
+        </thead>
+        <tbody data-rows>
+          {
+            Array.from({ length: 12 }, () => (
+              <tr class="row-skeleton">
+                <td colspan="8"><span class="skeleton skeleton--line" /></td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+    <footer class="table-foot">
+      <p class="table-foot__info" data-info aria-live="polite">Cargando catálogo…</p>
+      <button class="btn btn--ghost btn--sm" type="button" data-more hidden>Mostrar 30 más</button>
+    </footer>
+  </section>
+</Layout>

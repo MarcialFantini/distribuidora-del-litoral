@@ -1,0 +1,27 @@
+---
+/** Live KPI strip. Values start as zero-width-safe placeholders and tick once the engine runs. */
+const KPIS = [
+  { id: 'sales', label: 'Ventas de hoy', note: 'Tres canales', accent: true },
+  { id: 'orders', label: 'Pedidos de hoy', note: 'Recibidos en el central' },
+  { id: 'syncs', label: 'Sincronizaciones', note: 'Publicaciones actualizadas' },
+  { id: 'latency', label: 'Demora media', note: 'Del central al canal' },
+  { id: 'avoided', label: 'Sobreventas evitadas', note: 'Publicaciones corregidas a tiempo' },
+  { id: 'conflicts', label: 'Conflictos abiertos', note: 'Esperan resolución' },
+] as const;
+---
+
+<section class="kpis" aria-label="Indicadores en vivo" data-kpis>
+  {
+    KPIS.map((kpi) => (
+      <article class:list={['kpi', { 'kpi--accent': 'accent' in kpi }]} data-kpi={kpi.id}>
+        <p class="kpi__label">{kpi.label}</p>
+        <p class="kpi__value" data-kpi-value>
+          —
+        </p>
+        <p class="kpi__note" data-kpi-note>
+          {kpi.note}
+        </p>
+      </article>
+    ))
+  }
+</section>

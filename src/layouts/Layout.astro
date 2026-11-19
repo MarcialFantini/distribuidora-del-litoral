@@ -1,0 +1,60 @@
+---
+import '@fontsource/archivo-narrow/latin-600.css';
+import '@fontsource/archivo-narrow/latin-700.css';
+import '@fontsource/archivo/latin-400.css';
+import '@fontsource/archivo/latin-600.css';
+import '../styles/global.css';
+import '../styles/app.css';
+import '../styles/components.css';
+import '../styles/views.css';
+import displayFont from '@fontsource/archivo-narrow/files/archivo-narrow-latin-700-normal.woff2?url';
+import textFont from '@fontsource/archivo/files/archivo-latin-400-normal.woff2?url';
+import { ClientRouter } from 'astro:transitions';
+import Shell from '../components/shell/Shell.astro';
+import type { ViewId } from '../lib/nav';
+
+type Props = { title: string; description: string; view: ViewId };
+
+const { title, description, view } = Astro.props;
+const ogImage = new URL('/poster.jpg', Astro.site).href;
+const fullTitle = `${title} · Distribuidora del Litoral (demo)`;
+---
+
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href={displayFont} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={textFont} as="font" type="font/woff2" crossorigin />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script is:inline data-astro-rerun>
+      (function () {
+        var root = document.documentElement;
+        var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        root.classList.add(reduce ? 'reduced' : 'motion');
+        if (new URLSearchParams(location.search).has('showcase')) root.classList.add('is-showcase');
+      })();
+    </script>
+    <ClientRouter fallback="swap" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Saltar al contenido</a>
+    <Shell view={view}>
+      <main id="main" class="main" data-view={view} transition:animate="fade">
+        <slot />
+      </main>
+    </Shell>
+    <script>
+      import '../scripts/app';
+    </script>
+  </body>
+</html>

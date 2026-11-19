@@ -1,0 +1,242 @@
+---
+import Icon from '../Icon.astro';
+import ProductArt from '../ProductArt.astro';
+import { CHANNELS } from '../../data/channels';
+import { FEATURED_INDEX, productAt } from '../../data/catalog';
+import { channelPrice } from '../../data/history';
+import { formatMoney, formatUnits } from '../../lib/format';
+import { publishedFor } from '../../lib/stock';
+import { STAGES_VISIBLE } from '../../lib/stages';
+
+const featured = productAt(FEATURED_INDEX);
+const rules = { reserve: { mkt: 0, web: 10, own: 15 }, safety: 2, pauseBelow: 0 };
+---
+
+<section class="scene scene--compare" id="antes-despues" aria-labelledby="compare-title" data-scene="compare">
+  <header class="scene__head">
+    <div>
+      <p class="scene__eyebrow">Antes y después</p>
+      <h2 class="scene__title display" id="compare-title">Sin sincronizar, cada canal vende a ciegas</h2>
+      <p class="scene__lead">
+        Misma demanda y el mismo producto con 12 unidades. A la izquierda cada canal vende con su propia copia del stock; a la derecha
+        los tres leen el sistema central.
+      </p>
+    </div>
+    <button class="btn btn--ghost btn--sm" type="button" data-compare-toggle aria-pressed="false">
+      <Icon name="pause" size={16} /><span>Pausar</span>
+    </button>
+  </header>
+  <div class="compare">
+    {
+      (['before', 'after'] as const).map((side) => (
+        <div class={`compare__side compare__side--${side}`} data-side={side}>
+          <header class="compare__head">
+            <span class={`pill ${side === 'before' ? 'pill--error' : 'pill--ok'}`}>{side === 'before' ? 'Sin sincronizar' : 'Sincronizado'}</span>
+            <p class="compare__stat">
+              Cancelaciones <b class="num" data-cancel>0</b>
+            </p>
+          </header>
+          <div class="compare__real">
+            <span>Stock real</span>
+            <b class="num" data-real>12</b>
+            <span class="compare__bar"><span data-real-bar /></span>
+          </div>
+          <ul class="compare__channels">
+            {CHANNELS.map((channel) => (
+              <li class="compare__channel" data-ch={channel.id}>
+                <span class={`ch-badge ch-badge--sm ch-badge--${channel.id}`} aria-hidden="true">{channel.initials}</span>
+                <span class="compare__name">{channel.name}</span>
+                <span class="compare__bar"><span data-copy-bar /></span>
+                <b class="num compare__copy" data-copy>12</b>
+              </li>
+            ))}
+          </ul>
+          <ol class="compare__ticker" data-ticker aria-label={side === 'before' ? 'Últimas ventas sin sincronizar' : 'Últimas ventas sincronizadas'} />
+        </div>
+      ))
+    }
+  </div>
+</section>
+
+<div class="scene-row">
+  <section class="scene scene--product" id="ficha" aria-labelledby="product-title" data-scene="product">
+    <header class="scene__head">
+      <div>
+        <p class="scene__eyebrow">Ficha de producto</p>
+        <h2 class="scene__title display" id="product-title">Los tres canales iguales en menos de 10 segundos</h2>
+      </div>
+      <a class="link-btn" href={`/productos/${featured.sku.toLowerCase()}`}>Ver ficha completa</a>
+    </header>
+    <div class="psync">
+      <div class="psync__product">
+        <ProductArt category={featured.category} />
+        <div>
+          <p class="psync__name">{featured.name}</p>
+          <p class="sku">{featured.sku} · EAN {featured.ean}</p>
+          <ul class="psync__prices">
+            {
+              CHANNELS.map((channel) => (
+                <li>
+                  <span class={`ch-badge ch-badge--sm ch-badge--${channel.id}`} aria-hidden="true">{channel.initials}</span>
+                  <span class="visually-hidden">{channel.name}</span>
+                  <b class="num" data-ps-price={channel.id}>{formatMoney(channelPrice(featured.price, channel.markup))}</b>
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+      </div>
+      <div class="psync__central">
+        <span>Sistema central</span>
+        <b class="num" data-ps-central>{formatUnits(featured.stock)}</b>
+      </div>
+      <ul class="psync__channels">
+        {
+          CHANNELS.map((channel) => (
+            <li class="psync__channel" data-ps-ch={channel.id} data-state="ok">
+              <span class={`ch-badge ch-badge--${channel.id}`} aria-hidden="true">{channel.initials}</span>
+              <span class="psync__ch-text">
+                <span class="psync__ch-name">{channel.name}</span>
+                <span class="psync__status" data-ps-status>En sincronía</span>
+              </span>
+              <b class="num psync__units" data-ps-units>{formatUnits(publishedFor(featured.stock, rules, channel.id))}</b>
+              <span class="psync__progress" aria-hidden="true"><span data-ps-bar /></span>
+            </li>
+          ))
+        }
+      </ul>
+      <div class="psync__timer" aria-live="polite">
+        <span class="psync__timer-label">Demora simulada</span>
+        <b class="num psync__clock" data-ps-timer>0,0 s</b>
+        <span class="psync__result" data-ps-result>Los tres canales muestran el stock del central.</span>
+      </div>
+      <div class="psync__actions" role="group" aria-label="Vender a mano">
+        {
+          CHANNELS.map((channel) => (
+            <button class="btn btn--ghost btn--sm" type="button" data-ps-sell={channel.id}>
+              Vender 3 en {channel.name}
+            </button>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="scene scene--feed" id="registro" aria-labelledby="feed-title" data-scene="feed">
+    <header class="scene__head">
+      <div>
+        <p class="scene__eyebrow">Registro de eventos</p>
+        <h2 class="scene__title display" id="feed-title">Lo que pasa, en el momento</h2>
+      </div>
+      <a class="link-btn" href="/sincronizacion">Registro completo</a>
+    </header>
+    <div class="chips" role="group" aria-label="Filtrar eventos">
+      <button class="chip" type="button" data-feed-filter="all" aria-pressed="true">Todo</button>
+      <button class="chip" type="button" data-feed-filter="venta" aria-pressed="false">Ventas</button>
+      <button class="chip" type="button" data-feed-filter="sync" aria-pressed="false">Sincronización</button>
+      <button class="chip" type="button" data-feed-filter="problemas" aria-pressed="false">Problemas</button>
+    </div>
+    <ol class="feed" data-feed aria-label="Eventos recientes">
+      {Array.from({ length: 8 }, () => <li class="skeleton skeleton--row" />)}
+    </ol>
+  </section>
+</div>
+
+<section class="scene scene--queue" id="cola" aria-labelledby="queue-title" data-scene="queue">
+  <header class="scene__head">
+    <div>
+      <p class="scene__eyebrow">Cola de pedidos</p>
+      <h2 class="scene__title display" id="queue-title">De la venta a la etiqueta, sin tocar nada</h2>
+      <p class="scene__lead">Cada pedido pasa por el sistema central, recibe su factura simulada y genera la etiqueta de envío en el navegador.</p>
+    </div>
+    <p class="queue__done">Despachados hoy <b class="num" data-queue-done>0</b></p>
+  </header>
+  <div class="queue" data-queue>
+    {
+      STAGES_VISIBLE.map((stage, index) => (
+        <section class="queue__col" data-col={stage.id} aria-labelledby={`col-${stage.id}`}>
+          <h3 class="queue__title" id={`col-${stage.id}`}>
+            <span class="queue__step num">{index + 1}</span>
+            <Icon name={stage.icon} size={16} />
+            {stage.label}
+            <span class="queue__count num" data-col-count>
+              0
+            </span>
+          </h3>
+          <ol class="queue__list" data-col-list>
+            <li class="skeleton skeleton--row" />
+          </ol>
+        </section>
+      ))
+    }
+  </div>
+</section>
+
+<section class="scene scene--rules" id="reglas-vivo" aria-labelledby="rules-title" data-scene="rules">
+  <header class="scene__head">
+    <div>
+      <p class="scene__eyebrow">Reglas</p>
+      <h2 class="scene__title display" id="rules-title">Reservá stock por canal y mirá el efecto</h2>
+      <p class="scene__lead">El stock de seguridad no se publica en ningún canal. Cada canal ve su reserva más el stock compartido.</p>
+    </div>
+    <a class="link-btn" href="/reglas">Editor completo</a>
+  </header>
+  <div class="rules-live" data-rules-scene>
+    <div class="rules-live__sliders">
+      {
+        CHANNELS.map((channel) => (
+          <label class="slider" data-rule-ch={channel.id}>
+            <span class="slider__label">
+              <span class={`ch-badge ch-badge--sm ch-badge--${channel.id}`} aria-hidden="true">{channel.initials}</span>
+              Reserva para {channel.name}
+              <output class="num slider__value" data-rule-out>{rules.reserve[channel.id]} %</output>
+            </span>
+            <input type="range" min="0" max="60" step="5" value={rules.reserve[channel.id]} data-rule-input={channel.id} />
+          </label>
+        ))
+      }
+      <label class="slider">
+        <span class="slider__label">
+          Stock de seguridad
+          <output class="num slider__value" data-safety-out>{rules.safety} u.</output>
+        </span>
+        <input type="range" min="0" max="20" step="1" value={rules.safety} data-safety-input />
+      </label>
+    </div>
+    <div class="rules-live__viz">
+      <p class="rules-live__product">
+        {featured.name} · <b class="num" data-rules-central>{formatUnits(featured.stock)}</b> u. en el central
+      </p>
+      <div class="stackbar" data-stackbar aria-hidden="true">
+        <span class="stackbar__seg stackbar__seg--safety" data-seg="safety"></span>
+        <span class="stackbar__seg stackbar__seg--mkt" data-seg="mkt"></span>
+        <span class="stackbar__seg stackbar__seg--web" data-seg="web"></span>
+        <span class="stackbar__seg stackbar__seg--own" data-seg="own"></span>
+        <span class="stackbar__seg stackbar__seg--shared" data-seg="shared"></span>
+      </div>
+      <ul class="stackbar__legend">
+        <li><i class="dot dot--safety"></i>Seguridad</li>
+        <li><i class="dot dot--mkt"></i>Reserva BF</li>
+        <li><i class="dot dot--web"></i>Reserva VP</li>
+        <li><i class="dot dot--own"></i>Reserva LS</li>
+        <li><i class="dot dot--shared"></i>Compartido</li>
+      </ul>
+      <ul class="rules-live__result">
+        {
+          CHANNELS.map((channel) => (
+            <li data-rule-result={channel.id}>
+              <span>{channel.name} publica</span>
+              <b class="num" data-rule-units>
+                {formatUnits(publishedFor(featured.stock, rules, channel.id))}
+              </b>
+            </li>
+          ))
+        }
+      </ul>
+      <div class="rules-live__actions">
+        <button class="btn" type="button" data-rules-apply disabled>Aplicar en los tres canales</button>
+        <button class="btn btn--ghost" type="button" data-rules-revert disabled>Descartar</button>
+      </div>
+    </div>
+  </div>
+</section>

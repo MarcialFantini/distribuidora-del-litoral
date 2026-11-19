@@ -1,0 +1,44 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Icon from '../components/Icon.astro';
+import Hub from '../components/home/Hub.astro';
+import Kpis from '../components/home/Kpis.astro';
+import Scenes from '../components/home/Scenes.astro';
+import '../styles/home.css';
+---
+
+<Layout
+  title="Mapa en vivo"
+  description="Un solo stock, tres vidrieras: el sistema central de Distribuidora del Litoral alimenta un marketplace, una tienda online y su sitio propio. Demo con datos ficticios."
+  view="mapa"
+>
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero__copy">
+      <p class="hero__eyebrow">Integración de canales · Distribuidora del Litoral</p>
+      <h1 class="hero__title display" id="hero-title">Un solo stock,<br />tres vidrieras.</h1>
+      <p class="hero__lead">
+        El sistema central alimenta al marketplace, a la tienda online y al sitio propio. Cada venta baja el stock en los tres canales a la
+        vez, y ninguno vende lo que no hay.
+      </p>
+      <div class="hero__actions">
+        <button class="btn" type="button" data-hero-sell>
+          <Icon name="cart" size={16} /> Vender a mano
+        </button>
+        <button class="btn btn--yellow" type="button" data-hero-forward>
+          <Icon name="forward" size={16} /> Adelantar un día
+        </button>
+      </div>
+      <ul class="hero__legend" aria-label="Referencias del mapa">
+        <li><i class="legend-dot legend-dot--in"></i>Pedido entrando al central</li>
+        <li><i class="legend-dot legend-dot--out"></i>Stock publicado en el canal</li>
+      </ul>
+    </div>
+    <div class="hero__map">
+      <Hub />
+    </div>
+  </section>
+
+  <Kpis />
+
+  <Scenes />
+</Layout>

@@ -1,0 +1,198 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { CHANNELS } from '../data/channels';
+import { GO_LIVE_DAY } from '../data/history';
+import { niceMax, scaleLinear } from '../lib/chart';
+import { formatCompactMoney, formatDay, formatMoney, formatPercent, formatUnits } from '../lib/format';
+import { CHANNEL_ORDER, monthReport } from '../lib/reports';
+
+const report = monthReport();
+const W = 1000;
+const H = 260;
+const PAD = { l: 52, r: 8, t: 12, b: 26 };
+const max = niceMax(Math.max(...report.days.map((day) => day.total)));
+const y = scaleLinear([0, max], [H - PAD.b, PAD.t]);
+const band = (W - PAD.l - PAD.r) / report.days.length;
+const ticks = [0, max / 2, max];
+const shareTotal = report.sales || 1;
+const topMax = report.top[0]?.units ?? 1;
+const tone = { mkt: 'var(--ch-mkt)', web: 'var(--ch-web)', own: 'var(--ch-own)' } as const;
+---
+
+<Layout title="Reportes" description="Ventas de octubre por canal, cancelaciones antes y después de la integración, productos más vendidos y la actividad de hoy en vivo." view="reportes">
+  <header class="page-head">
+    <div>
+      <p class="page-head__eyebrow">Octubre y hoy</p>
+      <h1 class="page-title">Reportes</h1>
+      <p class="page-head__lead">{formatUnits(report.orders)} pedidos de octubre en los tres canales y la actividad de hoy, que se suma en vivo.</p>
+    </div>
+  </header>
+
+  <section class="kpis" aria-label="Resumen de octubre">
+    <article class="kpi kpi--accent">
+      <p class="kpi__label">Ventas de octubre</p>
+      <p class="kpi__value">{formatCompactMoney(report.sales)}</p>
+      <p class="kpi__note">{formatUnits(report.delivered)} pedidos entregados</p>
+    </article>
+    <article class="kpi">
+      <p class="kpi__label">Ticket promedio</p>
+      <p class="kpi__value">{formatMoney(report.ticket)}</p>
+      <p class="kpi__note">Por pedido entregado</p>
+    </article>
+    <article class="kpi">
+      <p class="kpi__label">Cancelaciones antes</p>
+      <p class="kpi__value">{formatPercent(report.before.rate)}</p>
+      <p class="kpi__note">{report.before.cancelled} de {report.before.orders} pedidos, días 1 a {GO_LIVE_DAY}</p>
+    </article>
+    <article class="kpi">
+      <p class="kpi__label">Cancelaciones después</p>
+      <p class="kpi__value">{formatPercent(report.after.rate)}</p>
+      <p class="kpi__note">{report.after.cancelled} de {report.after.orders} con stock unificado</p>
+    </article>
+    <article class="kpi">
+      <p class="kpi__label">Ventas de hoy</p>
+      <p class="kpi__value" data-today-sales>–</p>
+      <p class="kpi__note" data-today-orders>En vivo</p>
+    </article>
+    <article class="kpi">
+      <p class="kpi__label">Demora media hoy</p>
+      <p class="kpi__value" data-today-latency>–</p>
+      <p class="kpi__note">Objetivo: menos de 10 s</p>
+    </article>
+  </section>
+
+  <section class="card chart-card" aria-labelledby="daily-title">
+    <div class="card__head">
+      <div>
+        <h2 class="card__title" id="daily-title">Ventas por día y canal</h2>
+        <p class="card__sub">La línea marca el día en que se conectó el stock unificado.</p>
+      </div>
+      <ul class="legend">
+        {CHANNELS.map((channel) => <li><i class={`dot dot--${channel.id}`} />{channel.name}</li>)}
+      </ul>
+    </div>
+    <div class="card__body">
+      <svg class="bar-chart" viewBox={`0 0 ${W} ${H}`} role="group" aria-labelledby="daily-title" data-daily-chart>
+        {
+          ticks.map((tick) => (
+            <g aria-hidden="true">
+              <line class="grid" x1={PAD.l} x2={W - PAD.r} y1={y(tick)} y2={y(tick)} />
+              <text x={PAD.l - 6} y={y(tick) + 3} text-anchor="end">{formatCompactMoney(tick)}</text>
+            </g>
+          ))
+        }
+        {
+          report.days.map((day, index) => {
+            let base = H - PAD.b;
+            const x = PAD.l + index * band + band * 0.15;
+            const width = band * 0.7;
+            const label = `${formatDay(day.at)}: ${formatMoney(day.total)}, ${day.orders} pedidos${day.cancelled ? `, ${day.cancelled} cancelados` : ''}`;
+            return (
+              <g tabindex="0" role="img" aria-label={label} data-bar data-tip={label}>
+                {CHANNEL_ORDER.map((channel) => {
+                  const height = H - PAD.b - y(day.byChannel[channel]);
+                  base -= height;
+                  return <rect x={x} y={base} width={width} height={Math.max(0, height)} fill={tone[channel]} rx="1.5" />;
+                })}
+                {index % 5 === 0 && (
+                  <text x={x + width / 2} y={H - 8} text-anchor="middle">
+                    {formatDay(day.at)}
+                  </text>
+                )}
+              </g>
+            );
+          })
+        }
+        <line class="golive" x1={PAD.l + GO_LIVE_DAY * band} x2={PAD.l + GO_LIVE_DAY * band} y1={PAD.t} y2={H - PAD.b} aria-hidden="true" />
+        <text x={PAD.l + GO_LIVE_DAY * band + 6} y={PAD.t + 10} aria-hidden="true">Stock unificado</text>
+      </svg>
+      <p class="chart-tip" data-chart-tip aria-live="polite">Pasá el cursor o navegá con Tab por las barras para ver cada día.</p>
+      <details class="data-details">
+        <summary>Ver como tabla</summary>
+        <table class="table table--compact table--cards">
+          <caption class="visually-hidden">Ventas por día de octubre</caption>
+          <thead><tr><th scope="col">Día</th>{CHANNELS.map((channel) => <th scope="col" class="num">{channel.name}</th>)}<th scope="col" class="num">Cancelados</th></tr></thead>
+          <tbody>
+            {
+              report.days.map((day) => (
+                <tr>
+                  <th scope="row">{formatDay(day.at)}</th>
+                  {CHANNEL_ORDER.map((channel) => <td class="num" data-label={channel}>{formatMoney(day.byChannel[channel])}</td>)}
+                  <td class="num" data-label="Cancelados">{day.cancelled}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </details>
+    </div>
+  </section>
+
+  <div class="view-grid">
+    <section class="card" aria-labelledby="share-title">
+      <div class="card__head"><h2 class="card__title" id="share-title">Participación por canal</h2><span class="card__sub">Octubre</span></div>
+      <div class="card__body share-bars">
+        {
+          CHANNELS.map((channel) => {
+            const value = report.share[channel.id];
+            const pct = (value.sales / shareTotal) * 100;
+            return (
+              <div class="share-bar">
+                <span>{channel.name}</span>
+                <span class="share-bar__track" aria-hidden="true"><span style={`transform:scaleX(${pct / 100});background:${tone[channel.id]}`} /></span>
+                <b class="num">{formatPercent(pct)}</b>
+              </div>
+            );
+          })
+        }
+        <p class="card__sub">{CHANNELS.map((channel) => `${channel.name}: ${formatUnits(report.share[channel.id].orders)} pedidos`).join(' · ')}</p>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="cancel-title">
+      <div class="card__head"><h2 class="card__title" id="cancel-title">Ventas sin stock</h2><span class="card__sub">Antes y después</span></div>
+      <div class="card__body">
+        <div class="compare-figures">
+          <div class="figure--before"><b>{report.before.cancelled}</b>pedidos cancelados en los primeros {GO_LIVE_DAY} días, con stock copiado a mano en cada canal</div>
+          <div class="figure--after"><b>{report.after.cancelled}</b>cancelaciones en los {31 - GO_LIVE_DAY} días siguientes, con un solo stock</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="top-title">
+      <div class="card__head"><h2 class="card__title" id="top-title">Más vendidos</h2><span class="card__sub">Unidades en octubre</span></div>
+      <div class="card__body share-bars">
+        {
+          report.top.map((item) => (
+            <div class="share-bar share-bar--top">
+              <a class="row-link" href={`/productos/${item.product.sku.toLowerCase()}`}>{item.product.name}</a>
+              <span class="share-bar__track" aria-hidden="true"><span style={`transform:scaleX(${item.units / topMax});background:var(--cobalt)`} /></span>
+              <b class="num">{item.units} u.</b>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="today-title">
+      <div class="card__head"><h2 class="card__title" id="today-title">Hoy por hora</h2><span class="pill pill--ok">En vivo</span></div>
+      <div class="card__body">
+        <svg class="bar-chart" viewBox="0 0 480 200" role="img" aria-labelledby="today-title" data-hourly>
+          <desc data-hourly-desc>Ventas de hoy por hora y canal.</desc>
+        </svg>
+        <h3 class="card__sub today-latency-title">Demora media de sincronización por canal</h3>
+        <div class="share-bars" data-latency-bars>
+          {
+            CHANNELS.map((channel) => (
+              <div class="share-bar" data-latency={channel.id}>
+                <span>{channel.name}</span>
+                <span class="share-bar__track" aria-hidden="true"><span style={`transform:scaleX(0);background:${tone[channel.id]}`} /></span>
+                <b class="num">–</b>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+  </div>
+</Layout>

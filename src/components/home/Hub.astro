@@ -1,0 +1,111 @@
+---
+import { CHANNELS } from '../../data/channels';
+import { FEATURED_INDEX, PRODUCTS, productAt } from '../../data/catalog';
+import { formatUnits } from '../../lib/format';
+import { publishedFor } from '../../lib/stock';
+
+/**
+ * Scene 1: the central system in the middle and the three channels around it. Two cable
+ * layouts (wide and tall) share the same HTML nodes; CSS picks one per breakpoint.
+ */
+const rules = { reserve: { mkt: 0, web: 10, own: 15 }, safety: 2, pauseBelow: 0 };
+const central = PRODUCTS.reduce((sum, product) => sum + product.stock, 0);
+const featured = productAt(FEATURED_INDEX);
+const published = Object.fromEntries(
+  CHANNELS.map((channel) => [channel.id, PRODUCTS.reduce((sum, product) => sum + publishedFor(product.stock, rules, channel.id), 0)]),
+);
+
+const WIDE = {
+  center: [360, 250],
+  mkt: [118, 100],
+  web: [602, 100],
+  own: [360, 436],
+} as const;
+const TALL = {
+  center: [180, 318],
+  mkt: [92, 82],
+  web: [268, 82],
+  own: [180, 560],
+} as const;
+
+type Layout = typeof WIDE | typeof TALL;
+function cable(layout: Layout, id: 'mkt' | 'web' | 'own'): string {
+  const [cx, cy] = layout.center;
+  const [x, y] = layout[id];
+  if (id === 'own') return `M${x},${y} C${x},${(y + cy) / 2 + 20} ${cx},${(y + cy) / 2 - 20} ${cx},${cy}`;
+  const bend = (cy - y) * 0.9;
+  return `M${x},${y} C${x},${y + bend} ${cx + (x - cx) * 0.25},${cy - bend * 0.4} ${cx},${cy}`;
+}
+---
+
+<div class="hub" data-hub>
+  {
+    [
+      { name: 'wide', layout: WIDE, box: '0 0 720 520' },
+      { name: 'tall', layout: TALL, box: '0 0 360 640' },
+    ].map(({ name, layout, box }) => (
+      <svg class={`hub__wires hub__wires--${name}`} viewBox={box} aria-hidden="true" focusable="false" data-wires={name}>
+        <defs>
+          <pattern id={`dots-${name}`} width="18" height="18" patternUnits="userSpaceOnUse">
+            <circle cx="1.5" cy="1.5" r="1.1" fill="#cdd5ea" />
+          </pattern>
+          <radialGradient id={`glow-${name}`}>
+            <stop offset="0" stop-color="#ffd43b" stop-opacity="0.9" />
+            <stop offset="1" stop-color="#ffd43b" stop-opacity="0" />
+          </radialGradient>
+        </defs>
+        <rect width="100%" height="100%" fill={`url(#dots-${name})`} />
+        <circle class="hub__halo" cx={layout.center[0]} cy={layout.center[1]} r="120" />
+        {CHANNELS.map((channel) => (
+          <g class={`cable cable--${channel.id}`}>
+            <path class="cable__track" d={cable(layout, channel.id)} />
+            <path class="cable__core" d={cable(layout, channel.id)} data-cable={channel.id} />
+          </g>
+        ))}
+        <g data-pulses />
+      </svg>
+    ))
+  }
+
+  <div class="node node--central" data-central>
+    <p class="node__eyebrow"><span class="node__led" aria-hidden="true"></span>Sistema central</p>
+    <p class="node__value num" data-central-units>{formatUnits(central)}</p>
+    <p class="node__unit">unidades en {PRODUCTS.length} productos</p>
+    <p class="node__featured">
+      <span class="node__featured-name">{featured.name}</span>
+      <b class="num" data-central-featured>{formatUnits(featured.stock)}</b>
+    </p>
+    <span class="node__ping node__ping--central" aria-hidden="true"></span>
+  </div>
+
+  {
+    CHANNELS.map((channel) => (
+      <article class={`node node--channel node--${channel.id}`} data-node={channel.id} data-state="ok" aria-labelledby={`node-${channel.id}`}>
+        <header class="node__head">
+          <span class={`ch-badge ch-badge--${channel.id}`} aria-hidden="true">
+            {channel.initials}
+          </span>
+          <span class="node__title">
+            <span class="node__name" id={`node-${channel.id}`}>{channel.name}</span>
+            <span class="node__kind">{channel.kind}</span>
+          </span>
+        </header>
+        <p class="node__value num" data-node-units>
+          {formatUnits(published[channel.id] ?? 0)}
+        </p>
+        <p class="node__unit">
+          <span class="node__word">publicadas · </span><span data-node-state-label>En sincronía</span>
+        </p>
+        <footer class="node__foot">
+          <span class="node__orders">
+            <b class="num" data-node-orders>0</b> pedidos hoy
+          </span>
+          <button class="node__sell" type="button" data-sell={channel.id} aria-label={`Vender 1 unidad de ${featured.name} en ${channel.name}`}>
+            Vender 1
+          </button>
+        </footer>
+        <span class="node__ping" aria-hidden="true" />
+      </article>
+    ))
+  }
+</div>

@@ -1,0 +1,230 @@
+---
+import Icon from '../Icon.astro';
+import BrandMark from './BrandMark.astro';
+import { NAV, activeNav, type ViewId } from '../../lib/nav';
+import { CHANNELS } from '../../data/channels';
+
+type Props = { view: ViewId };
+const { view } = Astro.props;
+const active = activeNav(view);
+const mobileNav = NAV.filter((item) => item.mobile);
+const moreNav = NAV.filter((item) => !item.mobile);
+---
+
+<div class="app">
+  <aside class="sidebar" transition:persist="sidebar" aria-label="Navegación principal">
+    <a class="brand" href="/" aria-label="Distribuidora del Litoral, mapa en vivo">
+      <BrandMark size={34} />
+      <span class="brand__text">
+        <span class="brand__name">Distribuidora del Litoral</span>
+        <span class="brand__sub">Stock unificado · Santa Fe</span>
+      </span>
+    </a>
+    <nav class="side-nav" aria-label="Vistas">
+      {
+        NAV.map((item) => (
+          <a class="side-nav__link" href={item.href} data-nav={item.id} aria-current={item.id === active ? 'page' : undefined}>
+            <Icon name={item.icon} />
+            <span class="side-nav__label">{item.label}</span>
+            <kbd class="side-nav__key">{item.key}</kbd>
+          </a>
+        ))
+      }
+    </nav>
+    <section class="side-channels" aria-labelledby="side-channels-title">
+      <h2 class="side-channels__title" id="side-channels-title">Canales</h2>
+      <ul class="side-channels__list">
+        {
+          CHANNELS.map((channel) => (
+            <li class="side-channel" data-side-channel={channel.id} data-health="ok">
+              <span class={`ch-badge ch-badge--${channel.id}`} aria-hidden="true">{channel.initials}</span>
+              <span class="side-channel__text">
+                <span class="side-channel__name">{channel.name}</span>
+                <span class="side-channel__status" data-side-status>Conectado</span>
+              </span>
+              <span class="side-channel__queue num" data-side-queue title="Cambios en cola">0</span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+    <div class="sidebar__foot">
+      <button class="ghost-btn" type="button" data-open-shortcuts>
+        <Icon name="keyboard" /> Atajos <kbd>?</kbd>
+      </button>
+      <button class="ghost-btn" type="button" data-reset-demo>
+        <Icon name="reset" /> Reiniciar demo
+      </button>
+    </div>
+  </aside>
+
+  <header class="topbar" transition:persist="topbar">
+    <a class="topbar__brand" href="/" aria-label="Distribuidora del Litoral, mapa en vivo">
+      <BrandMark size={30} />
+    </a>
+    <button class="cmdk-btn" type="button" data-open-palette aria-keyshortcuts="Control+K Meta+K" aria-label="Buscar productos, pedidos o acciones (Ctrl K)">
+      <Icon name="search" />
+      <span class="cmdk-btn__text">Buscar SKU, pedido o acción</span>
+      <kbd class="cmdk-btn__kbd">Ctrl K</kbd>
+    </button>
+    <div class="live" data-live role="status" aria-live="off">
+      <span class="live__dot" aria-hidden="true"></span>
+      <span class="live__label" data-live-label>Conectando</span>
+      <time class="live__clock num" data-clock>08:00</time>
+    </div>
+    <div class="speed" role="group" aria-label="Control de la simulación">
+      <button class="speed__btn speed__pause" type="button" data-sim-pause aria-pressed="false" aria-label="Pausar simulación">
+        <Icon name="pause" size={16} />
+      </button>
+      <button class="speed__btn speed__opt" type="button" data-speed="1" aria-pressed="true">1x</button>
+      <button class="speed__btn speed__opt" type="button" data-speed="4" aria-pressed="false">4x</button>
+      <button class="speed__btn speed__opt" type="button" data-speed="10" aria-pressed="false">10x</button>
+      <button class="speed__btn speed__cycle num" type="button" data-speed-cycle aria-label="Velocidad 1x, cambiar">1x</button>
+    </div>
+    <button class="ff-btn" type="button" data-fast-forward aria-keyshortcuts="F" title="Ver un día de pedidos en segundos">
+      <Icon name="forward" size={16} />
+      <span class="ff-btn__text">Adelantar un día</span>
+    </button>
+    <button class="icon-btn bell" type="button" data-open-notifications aria-expanded="false" aria-controls="notifications" aria-label="Notificaciones">
+      <Icon name="bell" />
+      <span class="bell__badge num" data-unread hidden>0</span>
+    </button>
+    <p class="demo-mark" title="Marca, canales y datos ficticios">
+      <span class="demo-mark__dot" aria-hidden="true"></span>Demo<span class="demo-mark__note"> · datos ficticios</span>
+    </p>
+  </header>
+
+  <slot />
+
+  <nav class="tabbar" transition:persist="tabbar" aria-label="Vistas">
+    {
+      mobileNav.map((item) => (
+        <a class="tabbar__link" href={item.href} data-nav={item.id} aria-current={item.id === active ? 'page' : undefined}>
+          <Icon name={item.icon} size={20} />
+          <span>{item.short}</span>
+        </a>
+      ))
+    }
+    <button class="tabbar__link" type="button" data-open-more aria-haspopup="dialog">
+      <Icon name="more" size={20} />
+      <span>Más</span>
+    </button>
+  </nav>
+</div>
+
+<div class="overlays" transition:persist="overlays">
+  <section class="notif-panel" id="notifications" data-notifications hidden aria-labelledby="notif-title">
+    <header class="notif-panel__head">
+      <h2 class="notif-panel__title" id="notif-title">Notificaciones</h2>
+      <button class="link-btn" type="button" data-mark-read>Marcar todo como leído</button>
+    </header>
+    <ol class="notif-list" data-notif-list>
+      {Array.from({ length: 4 }, () => <li class="skeleton skeleton--row" />)}
+    </ol>
+  </section>
+
+  <dialog class="palette" data-palette aria-label="Paleta de comandos">
+    <div class="palette__box">
+      <div class="palette__search">
+        <Icon name="search" />
+        <input
+          class="palette__input"
+          type="text"
+          data-palette-input
+          placeholder="Buscar SKU, producto, pedido o acción…"
+          aria-label="Buscar"
+          role="combobox"
+          aria-expanded="true"
+          aria-controls="palette-results"
+          aria-autocomplete="list"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <kbd>Esc</kbd>
+      </div>
+      <div class="palette__results" id="palette-results" role="listbox" aria-label="Resultados" data-palette-results></div>
+      <footer class="palette__foot"><kbd>↑</kbd><kbd>↓</kbd> moverse · <kbd>Enter</kbd> abrir · <kbd>Esc</kbd> cerrar</footer>
+    </div>
+  </dialog>
+
+  <dialog class="modal" data-shortcuts aria-labelledby="shortcuts-title">
+    <div class="modal__box">
+      <header class="modal__head">
+        <h2 id="shortcuts-title" class="display modal__title">Atajos de teclado</h2>
+        <button class="icon-btn" type="button" data-close-dialog aria-label="Cerrar"><Icon name="close" /></button>
+      </header>
+      <dl class="shortcuts">
+        <div><dt><kbd>Ctrl</kbd> <kbd>K</kbd></dt><dd>Paleta de comandos</dd></div>
+        <div><dt><kbd>/</kbd></dt><dd>Buscar producto</dd></div>
+        <div><dt><kbd>1</kbd> a <kbd>7</kbd></dt><dd>Ir a cada vista</dd></div>
+        <div><dt><kbd>P</kbd></dt><dd>Pausar o reanudar la simulación</dd></div>
+        <div><dt><kbd>S</kbd></dt><dd>Cambiar velocidad (1x, 4x, 10x)</dd></div>
+        <div><dt><kbd>F</kbd></dt><dd>Adelantar un día de pedidos</dd></div>
+        <div><dt><kbd>V</kbd></dt><dd>Vender a mano en un canal al azar</dd></div>
+        <div><dt><kbd>N</kbd></dt><dd>Notificaciones</dd></div>
+        <div><dt><kbd>?</kbd></dt><dd>Esta ayuda</dd></div>
+        <div><dt><kbd>Esc</kbd></dt><dd>Cerrar paneles y fichas</dd></div>
+      </dl>
+    </div>
+  </dialog>
+
+  <dialog class="modal" data-reset-dialog aria-labelledby="reset-title">
+    <form class="modal__box" method="dialog">
+      <h2 id="reset-title" class="display modal__title">¿Reiniciar la demo?</h2>
+      <p class="modal__text">
+        Se borran las ventas, reglas, conflictos y ajustes guardados en este navegador. El stock vuelve al inicio del turno.
+      </p>
+      <div class="modal__actions">
+        <button class="btn btn--ghost" value="cancel">Cancelar</button>
+        <button class="btn" value="confirm">Reiniciar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="modal modal--wide" data-order-dialog aria-labelledby="order-title">
+    <div class="modal__box">
+      <header class="modal__head">
+        <h2 id="order-title" class="display modal__title" data-order-title>Pedido</h2>
+        <button class="icon-btn" type="button" data-close-dialog aria-label="Cerrar"><Icon name="close" /></button>
+      </header>
+      <div data-order-body></div>
+    </div>
+  </dialog>
+
+  <dialog class="sheet" data-more aria-labelledby="more-title">
+    <div class="sheet__box">
+      <header class="modal__head">
+        <h2 id="more-title" class="display modal__title">Más vistas</h2>
+        <button class="icon-btn" type="button" data-close-dialog aria-label="Cerrar"><Icon name="close" /></button>
+      </header>
+      <ul class="sheet__list">
+        {
+          moreNav.map((item) => (
+            <li>
+              <a class="sheet__link" href={item.href} data-nav={item.id} data-close-more>
+                <Icon name={item.icon} />
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+        <li>
+          <button class="sheet__link" type="button" data-open-shortcuts data-close-more><Icon name="keyboard" /> Atajos de teclado</button>
+        </li>
+        <li>
+          <button class="sheet__link" type="button" data-reset-demo data-close-more><Icon name="reset" /> Reiniciar demo</button>
+        </li>
+      </ul>
+    </div>
+  </dialog>
+
+  <div class="ff-overlay" data-ff-overlay hidden aria-hidden="true">
+    <p class="ff-overlay__label">Adelantando un día</p>
+    <p class="ff-overlay__clock num" data-ff-clock>08:00</p>
+    <div class="ff-overlay__bar"><span data-ff-bar></span></div>
+    <p class="ff-overlay__stats"><span class="num" data-ff-orders>0</span> pedidos · <span class="num" data-ff-syncs>0</span> sincronizaciones</p>
+  </div>
+
+  <div class="toasts" data-toasts aria-live="polite"></div>
+  <p class="visually-hidden" data-announcer aria-live="polite"></p>
+</div>

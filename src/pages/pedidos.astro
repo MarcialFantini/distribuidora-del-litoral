@@ -1,0 +1,96 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Icon from '../components/Icon.astro';
+import { CHANNELS } from '../data/channels';
+import { HISTORY_COUNT } from '../data/history';
+---
+
+<Layout title="Pedidos" description="Pedidos de los tres canales en una sola cola: hoy en vivo y los 800 pedidos de octubre." view="pedidos">
+  <header class="page-head">
+    <div>
+      <p class="page-head__eyebrow">Una sola cola</p>
+      <h1 class="page-title">Pedidos</h1>
+      <p class="page-head__lead">Todo lo que se vende en los tres canales entra al sistema central, se factura y sale con su etiqueta.</p>
+    </div>
+    <div class="page-head__actions">
+      <button class="btn btn--ghost" type="button" data-export><Icon name="download" size={16} /> Exportar CSV</button>
+    </div>
+  </header>
+
+  <section class="channel-split" aria-label="Pedidos de hoy por canal">
+    {
+      CHANNELS.map((channel) => (
+        <article class="channel-stat" data-split={channel.id}>
+          <span class={`ch-badge ch-badge--${channel.id}`} aria-hidden="true">
+            {channel.initials}
+          </span>
+          <p>
+            <b class="num channel-stat__value" data-split-orders>
+              0
+            </b>{' '}
+            <span class="channel-stat__label">pedidos hoy en {channel.name}</span>
+          </p>
+          <p class="channel-stat__label" data-split-sales>
+            –
+          </p>
+        </article>
+      ))
+    }
+  </section>
+
+  <section class="card">
+    <div class="toolbar">
+      <div class="chips" role="group" aria-label="Período">
+        <button class="chip" type="button" data-period="today" aria-pressed="true">Hoy, en vivo <span class="chip__count" data-period-count="today">0</span></button>
+        <button class="chip" type="button" data-period="month" aria-pressed="false">Octubre <span class="chip__count">{HISTORY_COUNT}</span></button>
+      </div>
+      <label class="search">
+        <Icon name="search" />
+        <span class="visually-hidden">Buscar pedido</span>
+        <input class="input" type="search" placeholder="Número, cliente o ciudad" data-search autocomplete="off" />
+      </label>
+      <label>
+        <span class="visually-hidden">Canal</span>
+        <select class="select" data-channel>
+          <option value="">Todos los canales</option>
+          {CHANNELS.map((channel) => <option value={channel.id}>{channel.name}</option>)}
+        </select>
+      </label>
+      <label>
+        <span class="visually-hidden">Estado</span>
+        <select class="select" data-stage>
+          <option value="">Todos los estados</option>
+          <option value="abiertos">En proceso</option>
+          <option value="despachado">Despachados</option>
+          <option value="cancelado">Cancelados</option>
+        </select>
+      </label>
+    </div>
+    <table class="table table--orders">
+      <caption class="visually-hidden">Pedidos de los tres canales</caption>
+      <thead>
+        <tr>
+          <th scope="col">Pedido</th>
+          <th scope="col">Canal</th>
+          <th scope="col">Cliente</th>
+          <th scope="col">Productos</th>
+          <th scope="col" class="num">Total</th>
+          <th scope="col">Estado</th>
+        </tr>
+      </thead>
+      <tbody data-rows>
+        {
+          Array.from({ length: 10 }, () => (
+            <tr>
+              <td colspan="6"><span class="skeleton skeleton--line" /></td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+    <footer class="table-foot">
+      <p data-info aria-live="polite">Cargando pedidos…</p>
+      <button class="btn btn--ghost btn--sm" type="button" data-more hidden>Mostrar 40 más</button>
+    </footer>
+  </section>
+</Layout>

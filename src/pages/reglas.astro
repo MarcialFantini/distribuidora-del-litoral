@@ -1,0 +1,161 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Icon from '../components/Icon.astro';
+import { CHANNELS } from '../data/channels';
+import { FEATURED_INDEX, productAt } from '../data/catalog';
+import { formatUnits } from '../lib/format';
+
+const featured = productAt(FEATURED_INDEX);
+const rules = { mkt: 0, web: 10, own: 15 };
+const SAMPLE = [3, 7, 12, 30, 41, 55, 88, 140];
+---
+
+<Layout title="Reglas" description="Reglas de stock y precio por canal: reservas, stock de seguridad, pausa de publicaciones y recargos." view="reglas">
+  <header class="page-head">
+    <div>
+      <p class="page-head__eyebrow">Stock y precio</p>
+      <h1 class="page-title">Reglas</h1>
+      <p class="page-head__lead">Definí cuánto stock ve cada canal y a qué precio publica. Los cambios se previsualizan en vivo y se aplican en lote.</p>
+    </div>
+  </header>
+
+  <div class="view-grid">
+    <section class="card rule-card" aria-labelledby="reserve-title" data-rules-scene>
+      <div class="card__head">
+        <h2 class="card__title" id="reserve-title">Reserva de stock por canal</h2>
+        <span class="card__sub">Suma máxima 90 %</span>
+      </div>
+      <div class="card__body">
+        {
+          CHANNELS.map((channel) => (
+            <label class="slider" data-rule-ch={channel.id}>
+              <span class="slider__label">
+                <span class={`ch-badge ch-badge--sm ch-badge--${channel.id}`} aria-hidden="true">{channel.initials}</span>
+                Reserva para {channel.name}
+                <output class="num slider__value" data-rule-out>{rules[channel.id]} %</output>
+              </span>
+              <input type="range" min="0" max="60" step="5" value={rules[channel.id]} data-rule-input={channel.id} />
+            </label>
+          ))
+        }
+        <label class="slider">
+          <span class="slider__label">
+            Stock de seguridad (no se publica)
+            <output class="num slider__value" data-safety-out>2 u.</output>
+          </span>
+          <input type="range" min="0" max="20" step="1" value="2" data-safety-input />
+        </label>
+        <label class="slider">
+          <span class="slider__label">
+            Pausar publicación por debajo de
+            <output class="num slider__value" data-pause-out>Nunca</output>
+          </span>
+          <input type="range" min="0" max="10" step="1" value="0" data-pause-input />
+        </label>
+        <div class="rules-live__viz rules-page__viz">
+          <p class="rules-live__product">{featured.name} · <b class="num" data-rules-central>{formatUnits(featured.stock)}</b> u. en el central</p>
+          <div class="stackbar" data-stackbar aria-hidden="true">
+            <span class="stackbar__seg stackbar__seg--safety" data-seg="safety"></span>
+            <span class="stackbar__seg stackbar__seg--mkt" data-seg="mkt"></span>
+            <span class="stackbar__seg stackbar__seg--web" data-seg="web"></span>
+            <span class="stackbar__seg stackbar__seg--own" data-seg="own"></span>
+            <span class="stackbar__seg stackbar__seg--shared" data-seg="shared"></span>
+          </div>
+          <ul class="stackbar__legend">
+            <li><i class="dot dot--safety"></i>Seguridad</li>
+            <li><i class="dot dot--mkt"></i>Reserva BF</li>
+            <li><i class="dot dot--web"></i>Reserva VP</li>
+            <li><i class="dot dot--own"></i>Reserva LS</li>
+            <li><i class="dot dot--shared"></i>Compartido</li>
+          </ul>
+          <ul class="rules-live__result">
+            {
+              CHANNELS.map((channel) => (
+                <li data-rule-result={channel.id}>
+                  <span>{channel.name} publica</span>
+                  <b class="num" data-rule-units>–</b>
+                </li>
+              ))
+            }
+          </ul>
+          <div class="rules-live__actions">
+            <button class="btn" type="button" data-rules-apply disabled>Aplicar en los tres canales</button>
+            <button class="btn btn--ghost" type="button" data-rules-revert disabled>Descartar</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="stack">
+      <section class="card" aria-labelledby="preview-title">
+        <div class="card__head">
+          <h2 class="card__title" id="preview-title">Vista previa</h2>
+          <span class="card__sub">Antes de aplicar</span>
+        </div>
+        <div class="card__body">
+          <table class="table table--compact table--cards preview-table">
+            <caption class="visually-hidden">Stock publicado por canal con las reglas en edición</caption>
+            <thead>
+              <tr><th scope="col">Producto</th><th scope="col" class="num">Central</th>{CHANNELS.map((channel) => <th scope="col" class="num">{channel.initials}</th>)}</tr>
+            </thead>
+            <tbody data-preview>
+              {
+                SAMPLE.map((p) => (
+                  <tr data-preview-row={p}>
+                    <th scope="row" class="cell-product"><a class="row-link" href={`/productos/${productAt(p).sku.toLowerCase()}`}>{productAt(p).name}</a></th>
+                    <td class="num" data-label="Central" data-preview-central>–</td>
+                    {CHANNELS.map((channel) => <td class="num" data-label={channel.name} data-preview-ch={channel.id}>–</td>)}
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="markup-title">
+        <div class="card__head">
+          <h2 class="card__title" id="markup-title">Recargo de precio por canal</h2>
+          <span class="card__sub">Sobre el precio base</span>
+        </div>
+        <form class="card__body" data-markup-form>
+          {
+            CHANNELS.map((channel) => (
+              <div class="markup-row">
+                <label class="markup-row__name" for={`markup-${channel.id}`}>
+                  <span class={`ch-badge ch-badge--sm ch-badge--${channel.id}`} aria-hidden="true">{channel.initials}</span>
+                  {channel.name}
+                  <span class="card__sub">comisión {channel.fee} %</span>
+                </label>
+                <span class="markup-row__input">
+                  <input class="input num" id={`markup-${channel.id}`} type="number" min="0" max="60" step="1" value={channel.markup} data-markup={channel.id} />%
+                </span>
+              </div>
+            ))
+          }
+          <p class="card__sub" data-markup-example></p>
+          <div class="rules-live__actions">
+            <button class="btn" type="submit"><Icon name="check" size={16} /> Guardar recargos</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card" aria-labelledby="conflict-rule-title">
+        <div class="card__head"><h2 class="card__title" id="conflict-rule-title">Conflictos</h2></div>
+        <div class="card__body">
+          <div class="toggle-row">
+            <div>
+              <strong>El sistema central siempre gana</strong>
+              <p>Si alguien edita stock o precio desde el panel de un canal, se corrige solo en segundos.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" data-central-wins />
+              <span class="switch__track" aria-hidden="true"></span>
+              <span class="visually-hidden">El sistema central siempre gana</span>
+            </label>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</Layout>

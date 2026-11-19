@@ -1,0 +1,11 @@
+---
+/** Invented mark for the fictional distributor: one block (central stock) feeding three lines. */
+type Props = { size?: number };
+const { size = 32 } = Astro.props;
+---
+
+<svg class="brand-mark" width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+  <rect width="32" height="32" rx="7" fill="var(--cobalt)"></rect>
+  <rect x="7" y="12" width="9" height="9" rx="2" fill="var(--yellow)"></rect>
+  <path d="M16 16.5h4.5M20.5 9.5v14M20.5 9.5H25M20.5 16.5H25M20.5 23.5H25" stroke="#fff" stroke-width="2.2" stroke-linecap="round" fill="none"></path>
+</svg>

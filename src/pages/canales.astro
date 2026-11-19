@@ -1,0 +1,106 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Icon from '../components/Icon.astro';
+import { CHANNELS } from '../data/channels';
+---
+
+<Layout title="Canales" description="Conexiones simuladas con el marketplace, la tienda online y el sitio propio: estado, demora, errores y pruebas de conexión." view="canales">
+  <header class="page-head">
+    <div>
+      <p class="page-head__eyebrow">Conexiones</p>
+      <h1 class="page-title">Canales</h1>
+      <p class="page-head__lead">
+        Tres vidrieras conectadas al sistema central. Todo es simulado en el navegador: podés cortar un canal, subir su demora o forzar errores y
+        mirar cómo responde la cola.
+      </p>
+    </div>
+  </header>
+
+  <div class="channel-cards">
+    {
+      CHANNELS.map((channel) => (
+        <article class="card channel-card" data-channel-card={channel.id} data-health="ok" aria-labelledby={`card-${channel.id}`}>
+          <header class="channel-card__head">
+            <span class={`ch-badge ch-badge--${channel.id}`} aria-hidden="true">
+              {channel.initials}
+            </span>
+            <div>
+              <h2 class="channel-card__name" id={`card-${channel.id}`}>
+                {channel.name}
+              </h2>
+              <p class="channel-card__kind">{channel.kind} · marca ficticia</p>
+            </div>
+            <span class="pill pill--ok" data-health-pill>
+              Conectado
+            </span>
+          </header>
+          <dl>
+            <div>
+              <dt>Pedidos hoy</dt>
+              <dd data-stat="orders">0</dd>
+            </div>
+            <div>
+              <dt>Ventas hoy</dt>
+              <dd data-stat="sales">–</dd>
+            </div>
+            <div>
+              <dt>Demora media</dt>
+              <dd data-stat="latency">–</dd>
+            </div>
+            <div>
+              <dt>Cambios en cola</dt>
+              <dd data-stat="queue">0</dd>
+            </div>
+            <div>
+              <dt>Sincronizaciones</dt>
+              <dd data-stat="syncs">0</dd>
+            </div>
+            <div>
+              <dt>Fallas</dt>
+              <dd data-stat="failures">0</dd>
+            </div>
+          </dl>
+          <div>
+            <p class="card__sub">Endpoint (simulado)</p>
+            <code>{channel.endpoint}</code>
+          </div>
+          <div>
+            <p class="card__sub">Credencial</p>
+            <code>{channel.token}</code>
+          </div>
+          <label class="switch">
+            <input type="checkbox" checked data-toggle="connected" />
+            <span class="switch__track" aria-hidden="true" />
+            Conectado
+          </label>
+          <label class="switch">
+            <input type="checkbox" checked data-toggle="autoSync" />
+            <span class="switch__track" aria-hidden="true" />
+            Sincronización automática
+          </label>
+          <label class="slider">
+            <span class="slider__label">
+              Demora simulada
+              <output class="num slider__value" data-out="latency">{channel.latency} s</output>
+            </span>
+            <input type="range" min="0.5" max="9" step="0.5" value={channel.latency} data-range="latency" />
+          </label>
+          <label class="slider">
+            <span class="slider__label">
+              Errores simulados
+              <output class="num slider__value" data-out="errorRate">{Math.round(channel.errorRate * 100)} %</output>
+            </span>
+            <input type="range" min="0" max="60" step="2" value={Math.round(channel.errorRate * 100)} data-range="errorRate" />
+          </label>
+          <div class="channel-card__actions">
+            <button class="btn btn--ghost btn--sm" type="button" data-test>
+              <Icon name="bolt" size={14} /> Probar conexión
+            </button>
+            <a class="btn btn--ghost btn--sm" href={`/pedidos?canal=${channel.id}`}>Ver pedidos</a>
+          </div>
+          <p class="test-result" data-test-result aria-live="polite" />
+        </article>
+      ))
+    }
+  </div>
+</Layout>
